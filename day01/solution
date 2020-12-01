@@ -1,0 +1,36 @@
+#!/usr/bin/env perl6
+
+sub addAndMultiply($x, $y) {
+    return ($x + $y, $x * $y);
+}
+
+sub part1(@input) {
+    "Part 1".say;
+    my @bar = (@input X[&addAndMultiply] @input);
+    grep({$_[0] == 2020}, @bar)[0][1].say
+}
+
+sub part2(@input) {
+    "Part 2".say;
+    LOOP: for 0..^@input.elems -> $a {
+        for $a..^@input.elems -> $b {
+            for $b..^@input.elems -> $c {
+                my $sum = @input[$a] + @input[$b] + @input[$c];
+
+                if ($sum == 2020) {
+                    (@input[$a] * @input[$b] * @input[$c]).say;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+    part1(@input);
+    part2(@input);
+}
+
+
+
