@@ -10,15 +10,51 @@ sub part1(@input) {
     grep({$_[0] == 2020}, @bar)[0][1].say
 }
 
+sub part1_optimized(@input) {
+    "Part 1 Optimized".say;
+    my %complements;
+    for @input {
+        %complements{2020 - $_} = $_;
+    }
+
+    for @input {
+        my $counterpart = %complements{$_};
+        if $counterpart {
+            ($_ * $counterpart).say;
+            return;
+        }
+    }
+}
+
+sub part2_optimized(@input) {
+    "Part 2 Optimized".say;
+    my %complements;
+    for @input {
+        %complements{2020 - $_} = $_;
+    }
+
+    for @input -> $a {
+        for @input -> $b {
+            my $counterpart = %complements{$a + $b};
+            if $counterpart {
+                ($counterpart * $a * $b).say;
+                return;
+            }
+        }
+    }
+}
+
 sub part2(@input) {
     "Part 2".say;
+    my $co = 0;
     LOOP: for 0..^@input.elems -> $a {
         for $a..^@input.elems -> $b {
             for $b..^@input.elems -> $c {
                 my $sum = @input[$a] + @input[$b] + @input[$c];
-
+                $co+=1;
                 if ($sum == 2020) {
                     (@input[$a] * @input[$b] * @input[$c]).say;
+                    $co.say;
                     return;
                 }
             }
@@ -30,6 +66,8 @@ sub MAIN() {
     my @input = "input.txt".IO.lines;
     part1(@input);
     part2(@input);
+    part1_optimized(@input);
+    part2_optimized(@input);
 }
 
 
