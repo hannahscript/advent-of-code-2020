@@ -1,21 +1,16 @@
 #!/usr/bin/env perl6
 
 sub isTree(@rows, $x, $y) {
-    return False if $y >= @rows.elems;
-
-    my $smartX = $x % @rows[0].elems;
-    return @rows[$y][$smartX] === "#";
+    @rows[$y].substr($x % @rows[$y].chars, 1) === "#";
 }
 
-sub part1(@map, $slopeX, $slopeY) {
-    my @rows = @map.map({ .comb });
-
+sub countTrees(@map, $slopeX, $slopeY) {
     my $x = 0;
     my $y = 0;
     my $trees = 0;
 
-    while ($y < @rows.elems) {
-        $trees += isTree(@rows, $x, $y) ?? 1 !! 0;
+    while ($y < @map.elems) {
+        $trees += isTree(@map, $x, $y);
         $x += $slopeX;
         $y += $slopeY;
     }
@@ -23,15 +18,19 @@ sub part1(@map, $slopeX, $slopeY) {
     return $trees;
 }
 
+sub part1(@input) {
+    return countTrees(@input, 3, 1);
+}
+
 sub part2(@input) {
-    part1(@input, 1, 1) * part1(@input, 3, 1) * part1(@input, 5, 1) * part1(@input, 7, 1) * part1(@input, 1, 2);
+    countTrees(@input, 1, 1) * countTrees(@input, 3, 1) * countTrees(@input, 5, 1) * countTrees(@input, 7, 1) * countTrees(@input, 1, 2);
 }
 
 sub MAIN() {
     my @input = "input.txt".IO.lines;
 
     "Part 1".say;
-    part1(@input, 3, 1).say;
+    part1(@input).say;
 
     "Part 2".say;
     part2(@input).say;
