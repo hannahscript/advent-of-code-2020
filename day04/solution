@@ -1,0 +1,57 @@
+#!/usr/bin/env perl6
+
+sub getPassports (@lines) {
+    my @passports;
+    my %currentPassport;
+    for @lines {
+        if (not $_ and %currentPassport) {
+            @passports.push(%currentPassport);
+            %currentPassport := {};
+            next;
+        }
+
+        my @pairs = $_.split(" ").map({$_ ~~ /(.+)\:(.+)/; ($0, $1)});
+        %currentPassport{$_[0]} = $_[1] for @pairs;
+
+    }
+
+    @passports.push(%currentPassport) if (%currentPassport);
+
+    @passports;
+}
+
+sub hasFields(%passport, @fields) {
+    [&&] @fields.map({%passport{$_}:exists});
+}
+
+sub part1(@input) {
+    my @passports = getPassports(@input);
+    my @requiredFields = <byr iyr eyr hgt hcl ecl pid>;
+    [+] @passports.map({hasFields($_, @requiredFields)});
+}
+
+sub passportValid(%passport) {
+    %passport<byr> ~~ 1920..2002 &&
+        %passport<iyr> ~~ 2010..2020 &&
+        %passport<eyr> ~~ 2020..2030 &&
+        %passport<hgt> ~~ /^(\d+)(cm|in)$/ && ($1 eq "cm" ?? $0 ~~ 150..193 !! $0 ~~ 59..76) &&
+        %passport<hcl> ~~ /^\#<xdigit> ** 6$/ &&
+        (%passport<ecl> eq any <amb blu brn gry grn hzl oth>) &&
+        %passport<pid> ~~ /^\d ** 9$/;
+}
+
+sub part2(@input) {
+    my @passports = getPassports(@input);
+    my @requiredFields = <byr iyr eyr hgt hcl ecl pid>;
+    [+] @passports.map({ hasFields($_, @requiredFields) && ?passportValid($_) });
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
