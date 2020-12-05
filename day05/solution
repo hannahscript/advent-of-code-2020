@@ -1,0 +1,52 @@
+#!/usr/bin/env perl6
+
+sub cutLow($range) {
+    $range.min .. $range.min + (($range.max - $range.min) div 2);
+}
+
+sub cutHigh($range) {
+    $range.min + (($range.max - $range.min) / 2).ceiling .. $range.max;
+}
+
+sub cutRange($range is copy, @letters) {
+    for @letters {
+        given $_ {
+            when 'F' | 'L' { $range = cutLow($range) }
+            when 'B' | 'R' { $range = cutHigh($range) }
+        }
+    }
+
+    return $range.min;
+}
+
+sub seat($code) {
+    my $row = cutRange(0..127, $code.substr(0, 7).comb);
+    my $col = cutRange(0..7, $code.substr(7).comb);
+    $row * 8 + $col;
+}
+
+sub part1(@input) {
+    @input.map(&seat).max;
+}
+
+sub findHole(@sortedList) {
+    my $prev = @sortedList[0];
+    for @sortedList {
+        return $_ - 1 if ($_ - $prev > 1);
+        $prev = $_;
+    }
+}
+
+sub part2(@input) {
+    findHole(@input.map(&seat).sort);
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
