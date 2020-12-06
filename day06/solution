@@ -18,16 +18,14 @@ sub groupInput(@input) {
 }
 
 sub part1(@input) {
-    my @groups = groupInput(@input);
-    [+] @groups.map({
-        ([(|)] $_.map(-> $a {set $a.comb})).elems;
+    [+] groupInput(@input).map({
+        ([(|)] .map(&comb)).elems;
     });
 }
 
 sub part2(@input) {
-    my @groups = groupInput(@input);
-    [+] @groups.map({
-        ([(&)] $_.map(-> $a {set $a.comb})).elems;
+    [+] groupInput(@input).map({
+        ([(&)] .map(&comb)).elems;
     });
 }
 
