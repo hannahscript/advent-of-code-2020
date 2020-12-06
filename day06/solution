@@ -1,0 +1,42 @@
+#!/usr/bin/env perl6
+
+sub groupInput(@input) {
+    gather {
+        my @group;
+        for @input {
+            if not $_ {
+                take @group.clone if @group;
+                @group = ();
+                next;
+            }
+
+            @group.push: $_;
+        }
+
+        take @group.clone if @group;
+    };
+}
+
+sub part1(@input) {
+    my @groups = groupInput(@input);
+    [+] @groups.map({
+        ([(|)] $_.map(-> $a {set $a.comb})).elems;
+    });
+}
+
+sub part2(@input) {
+    my @groups = groupInput(@input);
+    [+] @groups.map({
+        ([(&)] $_.map(-> $a {set $a.comb})).elems;
+    });
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
