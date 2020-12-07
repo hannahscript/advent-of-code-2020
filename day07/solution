@@ -1,0 +1,64 @@
+#!/usr/bin/env perl6
+
+sub parseLine($line) {
+    my %rule;
+    $line ~~ /^(.+?)\sbags/;
+    %rule<parent> = $0;
+    my @matches = $line ~~ m:global/(\d)\s(.+?)\sbags?/;
+    %rule<children> = @matches.map: { ($_[1], $_[0]) };
+    return %rule;
+}
+
+sub buildGraph(@rules) {
+    my %graph;
+    for @rules {
+        %graph{$_<parent>} = label => $_<parent>, parents => Array.new, children => $_<children>;
+    }
+
+    for @rules -> %rule {
+        for @(%rule<children>) {
+            my %node = %graph{$_[0]};
+            %node<parents>.push(%rule<parent>);
+        }
+    }
+
+    return %graph;
+}
+
+sub gatherParents(%graph, $label) {
+    my $parents = Set.new;
+    my @queue = @(%(%graph{$label})<parents>);
+    while @queue {
+        my $parent = @queue.shift;
+        $parents = $parents (|) ~$parent;
+        my %parentNode = %graph{$parent};
+        @queue.append(@(%parentNode<parents>));
+    }
+    $parents;
+}
+
+sub part1(@input) {
+    my @rules = @input.map: &parseLine;
+    my %graph = buildGraph @rules;
+    gatherParents(%graph, "shiny gold").elems;
+}
+
+sub getBags(%graph, $label) {
+    1 + [+] %(%graph{$label})<children>.map: {$_[1] * getBags(%graph, $_[0])};
+}
+
+sub part2(@input) {
+    my @rules = @input.map: &parseLine;
+    my %graph = buildGraph @rules;
+    getBags(%graph, "shiny gold") - 1;
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
