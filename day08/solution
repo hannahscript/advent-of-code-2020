@@ -1,0 +1,74 @@
+#!/usr/bin/env perl6
+
+class Op {
+    has $.name is rw is required;
+    has $.arg is required;
+    has $.executed is rw = False;
+
+    method flip() {
+        if ($.name eq "nop") {
+            $.name = "jmp";
+        } elsif ($.name eq "jmp") {
+            $.name = "nop";
+        }
+    }
+}
+
+sub parseOp($line) {
+    $line ~~ /(\w\w\w)\s([\+ | \-]\d+)/;
+    Op.new(name => ~$0, arg => +$1);
+}
+
+sub run(@ops) {
+    my $acc = 0;
+    my $ip = 0;
+    my $op = @ops[0];
+
+    while ($ip < @ops.elems and !$op.executed) {
+        my $ipModified = False;
+
+        given $op.name {
+            when 'nop' { }
+            when 'acc' { $acc += $op.arg; }
+            when 'jmp' { $ip = $ip + $op.arg; $ipModified = True; }
+        }
+
+        $op.executed = True;
+        $ip += 1 unless $ipModified;
+        $op = @ops[$ip];
+    }
+
+    return ($acc, $ip >= @ops.elems);
+}
+
+sub part1(@input) {
+    my @ops = @input.map: &parseOp;
+    run(@ops)[0];
+}
+
+sub part2(@input) {
+    my @ops = @input.map: &parseOp;
+
+    for ^@ops.elems -> $ip {
+        next if @ops[$ip].name eq "acc";
+
+        $_.executed = False for @ops;
+
+        @ops[$ip].flip();
+        my ($acc, $terminated) = run(@ops);
+        return $acc if $terminated;
+        @ops[$ip].flip();
+    }
+
+    return Nil;
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
