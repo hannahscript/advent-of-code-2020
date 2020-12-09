@@ -1,0 +1,39 @@
+#!/usr/bin/env perl6
+
+sub part1(@input) {
+    my $slice = 25;
+    for $slice..^@input.elems {
+        my @prev = @input[$_-$slice..^$_];
+        my @sums = (@prev X+ @prev).kv.grep(-> $i, $_ {not $i %% $slice}).map(*.tail);
+        return @input[$_] if not @sums.grep(@input[$_]);
+    }
+}
+
+sub part2(@input, $target) {
+    my $rangeStart = 0;
+    my $rangeEnd = 0;
+
+    loop {
+        my @numbers = @input[$rangeStart..$rangeEnd];
+        my $sum = [+] @numbers;
+        if $sum > $target {
+            $rangeStart += 1;
+            $rangeEnd = $rangeStart;
+        } elsif $sum < $target {
+            $rangeEnd += 1;
+        } else {
+            return @numbers.min + @numbers.max;
+        }
+    }
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    my $target = part1(@input);
+    $target.say;
+
+    "Part 2".say;
+    part2(@input, $target).say;
+}
