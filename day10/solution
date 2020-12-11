@@ -1,0 +1,43 @@
+#!/usr/bin/env perl6
+
+sub part1(@input) {
+    my @sorted = (0, |@input.map(+*)).sort;
+    my @diffs = (@sorted Z @sorted.tail(*- 1)).map({ $_[1] - $_[0] });
+    return @diffs.grep(1).elems * (1 + @diffs.grep(3).elems)
+}
+
+sub getFollowingAdapters($ad, @adapters) {
+    @adapters.grep({$_ > $ad and ($_ - $ad) <= 3});
+}
+
+sub dist(%mem, $ad, @adapters) {
+    return %mem{$ad} if %mem{$ad}:exists;
+    my @fads = getFollowingAdapters($ad, @adapters);
+
+    my $total = 0;
+    for @fads {
+        my $dist = dist(%mem, $_, @adapters);
+        $total += $dist;
+        %mem{$_} = $dist;
+    }
+
+    return $total;
+}
+
+# thank you Azulflame
+sub part2(@input) {
+    my @adapters = @input.map(+*).sort;
+    my $phone = @adapters.max + 3;
+    my %mem = $phone => 1;
+    dist(%mem, 0, (|@adapters, $phone));
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
