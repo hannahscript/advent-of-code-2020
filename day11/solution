@@ -1,0 +1,124 @@
+#!/usr/bin/env perl6
+
+sub isValidPos(@map, $x, $y) {
+    $x >= 0 and $x < @map[0].elems and $y >= 0 and $y < @map.elems;
+}
+
+sub isOccupied(@map, $x, $y) {
+    return False unless isValidPos(@map, $x, $y);
+    @map[$y;$x] eq '#';
+}
+
+sub getOccupiedNbs(@map, $x, $y) {
+    [+] ($x - 1, $y - 1, $x, $y - 1, $x + 1, $y - 1,
+         $x - 1, $y, $x + 1, $y,
+         $x - 1, $y + 1, $x, $y + 1, $x + 1, $y + 1).map(-> $nx, $ny { isOccupied(@map, $nx, $ny) });
+}
+
+sub shouldSit1(@map, $x, $y) {
+    getOccupiedNbs(@map, $x, $y) == 0;
+}
+
+sub shouldGetUp1(@map, $x, $y) {
+    getOccupiedNbs(@map, $x, $y) >= 4;
+}
+
+sub mutate(@map, &shouldSit, &shouldGetUp) {
+    my @clone = @map.map(*.clone);
+    my $changed = False;
+
+    for ^@map.elems -> $y {
+        for ^@map[0].elems -> $x {
+            my $oldSeat = @map[$y][$x];
+
+            if $oldSeat eq "L" {
+                if shouldSit(@map, $x, $y) {
+                    @clone[$y;$x] = "#";
+                    $changed = True;
+                }
+            } elsif $oldSeat eq "#" {
+                if shouldGetUp(@map, $x, $y) {
+                    @clone[$y;$x] = "L";
+                    $changed = True;
+                }
+            } else {next};
+        }
+    }
+
+    return $changed ?? @clone !! [];
+}
+
+sub mutateUntilEquil(@input, &shouldSit, &shouldGetUp) {
+    my @map = @input.map({ $_.comb.Array });
+    my @newMap = mutate(@map, &shouldSit, &shouldGetUp);
+    while (@newMap.elems > 0) {
+        @map = @newMap;
+        @newMap = mutate(@map, &shouldSit, &shouldGetUp);
+    }
+    @map[*;*].grep("#").elems;
+}
+
+sub part1(@input) {
+    mutateUntilEquil(@input, &shouldSit1, &shouldGetUp1);
+}
+
+sub getOccupied(@map, $x, $y, $dx, $dy) {
+    my $cx = $x + $dx;
+    my $cy = $y + $dy;
+    while isValidPos(@map, $cx, $cy) {
+        if (@map[$cy;$cx] eq "#") {
+            return 1;
+        } elsif (@map[$cy;$cx] eq "L") {
+            return 0;
+        }
+
+        $cx += $dx;
+        $cy += $dy;
+    }
+
+    return 0;
+}
+
+sub getRays() {
+    return (
+        -1, -1, 0, -1, 1, -1,
+        -1, 0, 1, 0,
+        -1, 1, 0, 1, 1, 1
+    );
+}
+
+sub shouldSit2(@map, $x, $y) {
+    for getRays() -> $dx, $dy {
+        return False if getOccupied(@map, $x, $y, $dx, $dy) > 0;
+    }
+
+    return True;
+}
+
+sub shouldGetUp2(@map, $x, $y) {
+    my $total = 0;
+    for getRays() -> $dx, $dy {
+        $total += getOccupied(@map, $x, $y, $dx, $dy) > 0;
+        return True if $total >= 5;
+    }
+
+    return False;
+}
+
+sub printMap(@map) {
+    @map.map(*.join("")).join("\n").say;
+}
+
+sub part2(@input) {
+    mutateUntilEquil(@input, &shouldSit2, &shouldGetUp2);
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
