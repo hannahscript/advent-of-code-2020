@@ -1,0 +1,71 @@
+#!/usr/bin/env perl6
+
+sub part1(@input) {
+    my $time = +@input[0];
+    my @ids = @input[1].split(",").grep(not * eq "x");
+
+    my $minId = @ids.head;
+    my $idWait = @ids.head  - ($time % @ids.head);
+    for @ids.tail(*-1) {
+
+        my $wait = $_ - ($time % $_);
+        if $wait < $idWait {
+            $minId = $_;
+            $idWait = $wait;
+        }
+    }
+
+    $minId * $idWait;
+}
+
+sub eea($a, $b) {
+    my @r = ($a, $b);
+    my @s = (1, 0);
+    my @t = (0, 1);
+
+    while @r[1] > 0 {
+        my $q = @r[0] div @r[1];
+        @r = (@r[1], @r[0] - $q * @r[1]);
+        @s = (@s[1], @s[0] - $q * @s[1]);
+        @t = (@t[1], @t[0] - $q * @t[1]);
+    }
+
+    return (@s[0], @t[0]);
+}
+
+# @a/b = (a, n) representing x ~ a (mod n)
+sub solve(@a, @b) {
+    my ($m1, $m2) = eea(@a[1], @b[1]);
+    my $x = @a[0] * $m2 * @b[1] + @b[0] * $m1 * @a[1];
+    return ($x, @a[1]*@b[1]);
+}
+
+sub part2(@input) {
+    my @eqs = @input[1].split(",").kv.map(-> $i, $v {(($v eq "x" ?? "" !! ($v-$i) % $v), $v eq "x" ?? "x" !! +$v)}).grep(not *[1] eq "x").List;
+
+    while @eqs.elems > 1 {
+        my $eq0 = @eqs[0];
+        my $eq1 = @eqs[1];
+
+        @eqs = (solve($eq0, $eq1), |@eqs.tail(*-2));
+    }
+
+    my ($x, $n) = @eqs[0];
+    if $x < 0 {
+        return ($x.abs div $n + 1) * $n + $x;
+    } elsif $x > 0 {
+        return $x - ($x div $n) * $n
+    }
+
+    return 0;
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
