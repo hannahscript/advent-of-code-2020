@@ -1,0 +1,97 @@
+#!/usr/bin/env perl6
+
+class Op {
+    has $.name is required;
+    has $.arg is required;
+}
+
+sub parseOp($line) {
+    $line ~~ /(\w)(\d+)/;
+    return Op.new(name => ~$0, arg => +$1);
+}
+
+sub forward($dir, $amount) {
+    given $dir {
+        when 0 { return (0, $amount) }
+        when 90 { return (-$amount, 0) }
+        when 180 { return (0, -$amount) }
+        when 270 { return ($amount, 0) }
+    }
+}
+
+sub run(@ops) {
+    my $n = 0;
+    my $e = 0;
+    my $dir = 0;
+    for @ops -> $op {
+        given $op.name {
+            when "N" { $n += $op.arg }
+            when "E" { $e += $op.arg }
+            when "S" { $n -= $op.arg }
+            when "W" { $e -= $op.arg }
+            when "R" { $dir = ($dir + $op.arg) % 360 }
+            when "L" { $dir = ($dir - $op.arg) % 360 }
+            when "F" { my ($dn, $de) = forward($dir, $op.arg); $n += $dn; $e += $de; }
+        }
+    }
+
+    return $n.abs + $e.abs;
+}
+
+sub part1(@input) {
+    my @ops = @input.map(&parseOp);
+    run(@ops);
+}
+
+sub rotateRight($x, $y, $deg) {
+    given $deg {
+        when 0 | 360 { return ($x, $y) }
+        when 90 { return ($y, -$x) }
+        when 180 { return (-$x, -$y) }
+        when 270 { rotateLeft($x, $y, 90) }
+    }
+}
+
+sub rotateLeft($x, $y, $deg) {
+    given $deg {
+        when 0 | 360 { return ($x, $y) }
+        when 90 { (-$y, $x) }
+        when 180 { return (-$x, -$y) }
+        when 270 { rotateRight($x, $y, 90) }
+    }
+}
+
+sub run2(@ops) {
+    my $sn = 0;
+    my $se = 0;
+    my $wn = 1;
+    my $we = 10;
+    for @ops -> $op {
+        given $op.name {
+            when "N" { $wn += $op.arg }
+            when "E" { $we += $op.arg }
+            when "S" { $wn -= $op.arg }
+            when "W" { $we -= $op.arg }
+            when "R" { my ($ne, $nn) = rotateRight($we, $wn, $op.arg); $we = $ne; $wn = $nn;  }
+            when "L" { my ($ne, $nn) = rotateLeft($we, $wn, $op.arg); $we = $ne; $wn = $nn; }
+            when "F" { $sn += $wn * $op.arg; $se += $we * $op.arg; }
+        }
+    }
+
+    return $sn.abs + $se.abs;
+}
+
+sub part2(@input) {
+    my @ops = @input.map(&parseOp);
+    run2(@ops);
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
