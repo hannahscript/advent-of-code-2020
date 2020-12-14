@@ -1,0 +1,132 @@
+#!/usr/bin/env perl6
+
+class Op {
+    has $.name is required;
+    has $.arg is required;
+    has $.pos;
+}
+
+sub parseOp($line) {
+    if $line.starts-with("ma") {
+        $line ~~ rx:s/mask \= (.+)/;
+        return Op.new(name => "mask", arg => ~$0);
+    } else {
+        $line ~~ rx:s/mem\[(\d+)\] \= (\d+)/;
+        return Op.new(name => "mem", pos => +$0, arg => +$1);
+    }
+}
+
+sub mask($n, $mask) {
+    my $orMask = ("0b" ~ $mask.subst("X", 0, :g)).Int;
+    my $andMask = ("0b" ~ $mask.subst("X", 1, :g)).Int;
+
+    return ($n +& $andMask) +| $orMask;
+}
+
+sub run(@ops) {
+    my $mask = "";
+    my %mem;
+
+    for @ops -> $op {
+        given $op.name {
+            when "mask" {
+                $mask = $op.arg;
+            }
+
+            when "mem" {
+                %mem{$op.pos} = mask($op.arg, $mask);
+            }
+        }
+    }
+
+    [+] %mem.values;
+}
+
+sub part1(@input) {
+    my @ops = @input.map(&parseOp);
+    run(@ops);
+}
+
+sub bits($len) {
+    return (0, 1) if $len == 1;
+    my $smaller = bits($len - 1);
+
+    return (
+        |$smaller.map({(0, |$_)}),
+        |$smaller.map({(1, |$_)})
+    );
+}
+
+sub xindexes($str is copy) {
+    $str = $str.flip;
+    my @indexes;
+    my $i = $str.index("X");
+    while (not $i === Nil) {
+        @indexes.push($i);
+        $i := $str.index("X", $i+1);
+    }
+
+    return @indexes;
+}
+
+sub set($n, $pos, $d) {
+    if $d == 0 {
+        return $n +& (+^ (1 +< $pos));
+    } else {
+        return $n +| (1 +< $pos);
+    }
+}
+
+sub plex($pos, @indexes, @combs) {
+    @combs.map(-> @comb {
+        my $npos = $pos;
+        for zip(@indexes, @comb) {
+            $npos = set($npos, $_[0], $_[1]);
+        }
+        $npos;
+    });
+}
+
+sub apply($pos is copy, $mask) {
+    my $orMask = ("0b" ~ $mask.subst("X", 0, :g)).Int;
+
+    $pos = $pos +| $orMask;
+    my @indexes = xindexes($mask);
+    return plex($pos, @indexes, bits(@indexes.elems));
+}
+
+sub run2(@ops) {
+    my $mask = "";
+    my %mem;
+
+    for @ops -> $op {
+        given $op.name {
+            when "mask" {
+                $mask = $op.arg;
+            }
+
+            when "mem" {
+                for apply($op.pos, $mask) {
+                    %mem{$_} = $op.arg;
+                }
+            }
+        }
+    }
+
+    [+] %mem.values;
+}
+
+sub part2(@input) {
+    my @ops = @input.map(&parseOp);
+    run2(@ops);
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
