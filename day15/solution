@@ -1,0 +1,32 @@
+#!/usr/bin/env perl6
+
+sub game(@input, $n) {
+    my %last;
+    for @input.kv -> $i, $v { %last{$v} = $i; }
+    my $last = @input.tail;
+    for @input.elems..^$n -> $i {
+        my $p=$last;
+        $last = %last{$last}:exists ?? $i - 1 - %last{$last} !! 0;
+        %last{$p}=$i-1;
+    }
+
+    $last;
+}
+
+sub part1(@input) {
+    game(@input, 2020);
+}
+
+sub part2(@input) {
+    game(@input, 30000000);
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.slurp.chomp.split(",");
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
