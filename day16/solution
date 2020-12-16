@@ -1,0 +1,96 @@
+#!/usr/bin/env perl6
+
+class Doc {
+    has @.rules is required;
+    has @.myTicket is required;
+    has @.otherTickets is required;
+}
+
+class Rule {
+    has $.name is required;
+    has $.rangeA is required;
+    has $.rangeB is required;
+}
+
+sub parseRule($line) {
+    $line ~~ rx:s/(.+?)\: (\d+?)\-(\d+?) or (\d+?)\-(\d+)/;
+    Rule.new(
+        name => ~$0,
+        rangeA => (+$1)..(+$2),
+        rangeB => (+$3)..(+$4),
+    );
+}
+
+sub parseTicket($line) {
+    $line.split(",");
+}
+
+sub applies($n, $rule) {
+    $n ~~ $rule.rangeA || $n ~~ $rule.rangeB;
+}
+
+sub parse($input) {
+    my @splits = $input.split(rx:s/your ticket\:|nearby tickets\:/);
+
+    my @rules = @splits[0].split("\n").grep(*.chars>0).map(&parseRule);
+    my @myTicket = parseTicket(@splits[1].split("\n").grep(*.chars>0)[0]).map(+*);
+    my @otherTickets = @splits[2].split("\n").grep(*.chars>0).map(&parseTicket).map(*.map(+*).Array);
+    Doc.new(
+            :@rules,
+            :@myTicket,
+            :@otherTickets
+    );
+}
+
+sub isValid($n, @rules) {
+    [||] @rules.map({applies($n, $_)});
+}
+
+sub part1($input) {
+    my $doc = parse($input);
+    [+] $doc.otherTickets.List.flat.grep({not isValid($_, $doc.rules)});
+}
+
+sub getColumn(@tickets, $i) {
+    return @tickets.map(*[$i]);
+}
+
+sub any(@a, &p) {
+    @a.grep(&p).elems > 0;
+}
+
+sub part2($input) {
+    my $doc = parse($input);
+
+    my @validTickets = $doc.otherTickets.grep({ [&&] $_.map({isValid($_, $doc.rules)})});
+
+    my %matches;
+    for 0..^$doc.rules.elems -> $i {
+        my @col = getColumn(@validTickets, $i);
+        %matches{$i} = $doc.rules.grep(-> $rule {[&&] @col.map(-> $n {applies($n, $rule)})}).map(*.name).Array;
+    }
+
+    my %mapping;
+    while any(%matches.values, *.elems > 0) {
+        my @uniques = %matches.kv.grep(-> $k, @v {@v.elems == 1});
+        for @uniques -> ($col, @rules) {
+            %mapping{@rules[0]} = $col;
+            for %matches.keys -> $k {
+                %matches{$k} = %matches{$k}.grep(not * eq @rules[0]);
+            }
+        }
+    }
+
+    my @deprules = %mapping.keys.grep(*.starts-with("departure"));
+    [*] @deprules.map({$doc.myTicket[%mapping{$_}]});
+}
+
+sub MAIN() {
+    my $input = "input.txt".IO.slurp.chomp;
+
+    "Part 1".say;
+    part1($input).say;
+
+    "Part 2".say;
+    part2($input).say;
+}
