@@ -62,7 +62,7 @@ grammar P2 {
 
 class P2Actions {
     method TOP($/) {
-        make $/.values[0].made
+        make $<MUL>.made
     }
     method PRIM($/) {
         make $/.hash.values[0].made
@@ -71,24 +71,10 @@ class P2Actions {
         make +$/
     }
     method ADD($/) {
-        return make $<PRIM>.made unless $0;
-
-        my $value = $<PRIM>.made;
-        for $0 -> $m {
-            $value += $m<PRIM>.made;
-        }
-
-        make $value;
+        make $<PRIM>.made + [+] $0.map(*<PRIM>.made);
     }
     method MUL($/) {
-        return make $<ADD>.made unless $0;
-
-        my $value = $<ADD>.made;
-        for $0 -> $m {
-            $value *= $m<ADD>.made;
-        }
-
-        make $value;
+        make $<ADD>.made * [*] $0.map(*<ADD>.made);
     }
 }
 
