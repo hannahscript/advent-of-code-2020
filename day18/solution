@@ -1,0 +1,111 @@
+#!/usr/bin/env perl6
+
+grammar P1 {
+    token TOP { <OP> }
+    token  PRIM {
+        <digit> | '(' <TOP> ')'
+    }
+    token digit { \d }
+    token OP {
+        <PRIM> (('+' | '*') <PRIM>)*
+    }
+}
+
+class P1Actions {
+    method TOP($/) {
+        make $/.values[0].made
+    }
+    method PRIM($/) {
+        make $/.hash.values[0].made
+    }
+    method digit($/) {
+        make +$/
+    }
+    method OP($/) {
+        return make $<PRIM>.made unless $0;
+
+        my $value = $<PRIM>.made;
+        for $0 -> $m {
+            my $op = $m[0];
+            if $op eq "+" {
+                $value += $m<PRIM>.made;
+            } elsif $op eq "*" {
+                $value *= $m<PRIM>.made;
+            }
+        }
+
+        make $value;
+    }
+}
+
+sub eval1($expr) {
+    P1.parse($expr, actions => P1Actions.new).made;
+}
+
+sub part1(@input) {
+    [+] @input.map(*.subst(" ", "", :g)).map({ eval1($_) })
+}
+
+grammar P2 {
+    token TOP { <MUL> }
+    token  PRIM {
+        <digit> | '(' <TOP> ')'
+    }
+    token digit { \d }
+    token MUL {
+        <ADD> ('*' <ADD>)*
+    }
+    token ADD {
+        <PRIM> ('+' <PRIM>)*
+    }
+}
+
+class P2Actions {
+    method TOP($/) {
+        make $/.values[0].made
+    }
+    method PRIM($/) {
+        make $/.hash.values[0].made
+    }
+    method digit($/) {
+        make +$/
+    }
+    method ADD($/) {
+        return make $<PRIM>.made unless $0;
+
+        my $value = $<PRIM>.made;
+        for $0 -> $m {
+            $value += $m<PRIM>.made;
+        }
+
+        make $value;
+    }
+    method MUL($/) {
+        return make $<ADD>.made unless $0;
+
+        my $value = $<ADD>.made;
+        for $0 -> $m {
+            $value *= $m<ADD>.made;
+        }
+
+        make $value;
+    }
+}
+
+sub eval2($expr) {
+    P2.parse($expr, actions => P2Actions.new).made;
+}
+
+sub part2(@input) {
+    [+] @input.map(*.subst(" ", "", :g)).map({ eval2($_) })
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
