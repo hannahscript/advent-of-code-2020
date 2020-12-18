@@ -1,0 +1,218 @@
+#!/usr/bin/env perl6
+
+class Grid {
+    has $!maxIterations;
+    has $!xyWidth;
+    has $!height;
+    has @!grid;
+
+    # @grid is a square
+    # i=1 => 0 1 2
+    # i=2 => 0 1 2 3 4
+    # i=3 => 0 1 2 3 4 5 6
+    submethod BUILD(:@grid, :$iterations) {
+        $!maxIterations = $iterations;
+
+        # Get input square width/height
+        my $width = @grid.elems;
+        # Create grid large enough to hold simulation regarding max. iterations
+        $!xyWidth = $width + 2 * $iterations;
+        $!height = 1 + 2 * $iterations;
+        @!grid = createGrid($!xyWidth, $!height);
+
+        # Fill grid with initial input
+        for ^$width -> $y {
+            for ^$width -> $x {
+                @!grid[$iterations;$iterations+$y;$iterations+$x] = @grid[$y;$x];
+            }
+        }
+    }
+
+    method runAndCount() {
+        self.iterate for ^$!maxIterations;
+        return @!grid[*;*;*].grep("#").elems;
+    }
+
+    method iterate() {
+        my @next;# = createGrid($!xyWidth, $!height);
+
+        for ^$!height -> $z {
+            for ^$!xyWidth -> $y {
+                for ^$!xyWidth -> $x {
+                    my $nb = self.countNeighbours($x, $y, $z);
+                    if @!grid[$z;$y;$x] eq "." {
+                        @next[$z;$y;$x] = $nb == 3 ?? "#" !! ".";
+                    } else {
+                        @next[$z;$y;$x] = $nb == 2|3 ?? "#" !! ".";
+                    }
+                }
+            }
+        }
+
+        @!grid = @next;
+    }
+
+    method countNeighbours($x, $y, $z) {
+        my $count = 0;
+        for (-1, 0, 1) -> $zd {
+            for (-1, 0, 1) -> $yd {
+                for (-1, 0, 1) -> $xd {
+                    next if ($xd == $yd == $zd == 0) or not self.isValidPos($x+$xd, $y+$yd, $z+$zd);
+                    $count += @!grid[$z+$zd;$y+$yd;$x+$xd] eq '.' ?? 0 !! 1;
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    method isValidPos($x, $y, $z) {
+        $x >= 0 and $x < $!xyWidth and $y >= 0 and $y < $!xyWidth and $z >= 0 and $z < $!height;
+    }
+}
+
+sub createGrid($xyWidth, $height) {
+    my @grid;
+    for ^$height -> $z {
+        for ^$xyWidth -> $y {
+            for ^$xyWidth -> $x {
+                @grid[$z;$y;$x] = '.';
+            }
+        }
+    }
+
+    return @grid;
+}
+
+sub part1(@input) {
+    my $grid = Grid.new(grid => @input.map(*.comb), iterations => 6);
+    $grid.runAndCount;
+}
+
+# its 3am i cant be bothered to refactor the Grid class thankyouverymuch
+class Grid4D {
+
+    has $!qs; has $!qe;
+    has $!zs; has $!ze;
+    has $!ys; has $!ye;
+    has $!xs; has $!xe;
+
+    has $!maxIterations;
+    has $!xyWidth;
+    has $!height;
+    has @!grid;
+
+    # @grid is a square
+    # i=1 => 0 1 2
+    # i=2 => 0 1 2 3 4
+    # i=3 => 0 1 2 3 4 5 6
+    # X X X X X
+    # X X X X X
+    # X X X X X
+    # X X X X X
+    # X X X X X
+    submethod BUILD(:@grid, :$iterations) {
+        $!maxIterations = $iterations;
+
+        # Get input square width/height
+        my $width = @grid.elems;
+        # Create grid large enough to hold simulation regarding max. iterations
+        $!xyWidth = $width + 2 * $iterations;
+        $!height = 1 + 2 * $iterations;
+        @!grid = createGrid4D($!xyWidth, $!height, $!height);
+
+        $!qs = $iterations - 1; $!qe = $iterations + 1;
+        $!zs = $iterations - 1; $!ze = $iterations + 1;
+        $!ys = $iterations - 1; $!ye = $iterations + $width;
+        $!xs = $iterations - 1; $!xe = $iterations + $width;
+
+
+        # Fill grid with initial input
+        for ^$width -> $y {
+            for ^$width -> $x {
+                @!grid[$iterations;$iterations;$iterations+$y;$iterations+$x] = @grid[$y;$x];
+            }
+        }
+    }
+
+    method runAndCount() {
+        for ^$!maxIterations {
+            self.iterate;
+            $!qs -= 1; $!qe += 1;
+            $!zs -= 1; $!ze += 1;
+            $!ys -= 1; $!ye += 1;
+            $!xs -= 1; $!xe += 1;
+        }
+        return @!grid[*;*;*;*].grep("#").elems;
+    }
+
+    method iterate() {
+        my @next = createGrid4D($!xyWidth, $!height, $!height);;
+
+        for $!qs..$!qe -> $q {
+            for $!zs..$!ze -> $z {
+                for $!ys..$!ye -> $y {
+                    for $!xs..$!xe -> $x {
+                        my $nb = self.countNeighbours($x, $y, $z, $q);
+                        if @!grid[$q;$z;$y;$x] eq "." {
+                            @next[$q;$z;$y;$x] = $nb == 3 ?? "#" !! ".";
+                        } else {
+                            @next[$q;$z;$y;$x] = $nb == 2 | 3 ?? "#" !! ".";
+                        }
+                    }
+                }
+            }
+        }
+        @!grid = @next;
+    }
+
+    method countNeighbours($x, $y, $z, $q) {
+        my $count = 0;
+        for (-1, 0, 1) -> $qd {
+            for (-1, 0, 1) -> $zd {
+                for (-1, 0, 1) -> $yd {
+                    for (-1, 0, 1) -> $xd {
+                        next if ($xd == $yd == $zd == $qd == 0) or not self.isValidPos($x + $xd, $y + $yd, $z + $zd, $q + $qd);
+                        $count += @!grid[$q+$qd;$z + $zd;$y + $yd;$x + $xd] eq '.' ?? 0 !! 1;
+                    }
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    method isValidPos($x, $y, $z, $q) {
+        $x >= 0 and $x < $!xyWidth and $y >= 0 and $y < $!xyWidth and $z >= 0 and $z < $!height and $q >= 0 and $q < $!height;
+    }
+}
+
+sub createGrid4D($xyWidth, $height, $depth) {
+    my @grid;
+    for ^$depth -> $q {
+        for ^$height -> $z {
+            for ^$xyWidth -> $y {
+                for ^$xyWidth -> $x {
+                    @grid[$q;$z;$y;$x] = '.';
+                }
+            }
+        }
+    }
+
+    return @grid;
+}
+
+sub part2(@input) {
+    my $grid = Grid4D.new(grid => @input.map(*.comb), iterations => 6);
+    $grid.runAndCount;
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
