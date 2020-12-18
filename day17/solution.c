@@ -95,7 +95,7 @@ int main() {
     }
 
     // Count active cells
-    long count = 0;
+    int count = 0;
     for (int i = 0; i < GRID_WIDTH * GRID_WIDTH * GRID_HEIGHT * GRID_HEIGHT; i++) {
         count += grid[i];
     }
