@@ -1,0 +1,139 @@
+#!/usr/bin/env perl6
+
+#
+# fuck refactoring this
+# read at your own risk
+# (uses CYK algorithm after putting rules into CNF for both parts)
+#
+
+class Rule {
+    has $.id is required is rw;
+    has $.terminal is required;
+    has $.symbol;
+    has @.rules;
+}
+
+sub parseRule($line) {
+    if $line ~~ rx:s/^(\d+)\: (\d+)$/ { # Unit rule
+        return (Rule.new(id => ~$0, terminal => False, rules => (~$1)));
+    } elsif $line ~~ rx:s/^(\d+)\: (\d+) (\d+)$/ { # No fork
+        return (Rule.new(id => ~$0, terminal => False, rules => (~$1, ~$2)));
+    } elsif $line ~~ rx:s/^(\d+)\: (\d+) (\d+) \| (\d+) (\d+)$/ { # Fork
+        return (
+            Rule.new(id => ~$0, terminal => False, rules => (~$1, ~$2)),
+            Rule.new(id => ~$0, terminal => False, rules => (~$3, ~$4))
+        );
+    } elsif $line ~~ rx:s/^(\d+)\: (\d+) \| (\d+)$/ { # Unit Fork
+        return (
+        Rule.new(id => ~$0, terminal => False, rules => (~$1)),
+        Rule.new(id => ~$0, terminal => False, rules => (~$2))
+        );
+    } elsif $line ~~ rx:s/^(\d+)\: \"(\w)\"$/ {# Terminal
+        return (Rule.new(id => ~$0, terminal => True, symbol => ~$1));
+    } else {
+        die("Can't parse rule: '$line'");
+    }
+}
+
+sub splitList(@list, $sep) {
+    my $i = @list.first($sep, :k);
+    return $i.defined ?? (@list[^$i], @list[1+$i..*]) !! (@list, ());
+}
+
+sub key($l, $s, $v) {
+    "$l;$s;$v";
+}
+
+sub cyk($str, @rules) {
+    die("WTF") if $str eq "";
+    #@cnfRules.grep(not *.terminal).map(*.id).unique;
+    my @prodRules = @rules.grep(not *.terminal);
+    my @termiRules = @rules.grep(*.terminal);
+    my %dyn;
+
+    #say $str;
+    for ^$str.chars -> $i {
+        my $c = $str.substr($i, 1);
+        my @applicableRules = @termiRules.grep(*.symbol eq $c);
+        for @applicableRules -> $rule {
+            %dyn{key(1, $i, $rule.id)} = True;
+        }
+    }
+
+    #say %dyn;
+    #say @prodRules;
+
+    for 2..$str.chars -> $l {
+        for 0..$str.chars-$l -> $s {
+            for 1..$l-1 -> $p {
+                for @prodRules -> $rule {
+                    #say key($p, $s, $rule.rules[0]) ~ "  " ~ key($l-$p, $s+$p, $rule.rules[1]);
+                    %dyn{key($l, $s, $rule.id)} = True if %dyn{key($p, $s, $rule.rules[0])} and %dyn{key($l-$p, $s+$p, $rule.rules[1])};
+                }
+            }
+        }
+    }
+    #say %dyn;
+    #say key($str.elems, 0, "0");
+
+    return so %dyn{key($str.chars, 0, 0)};
+}
+
+sub foo() {
+    say "hello";
+}
+
+sub part1(@input) {
+    my @split = splitList(@input, "");
+    my @rules = @split[0].flatmap(&parseRule);
+
+    my @unitRules = @rules.grep({not $_.terminal and $_.rules.elems == 1});
+    my @fixedRules = @unitRules.flatmap(-> $rule {
+        my @matchingRules = @rules.grep(*.id eq $rule.rules[0]);
+        @matchingRules.map({my $newRule = $_.clone; $newRule.id = $rule.id; $newRule})
+    });
+
+    my @cnfRules = @rules.grep({$_.terminal or not $_.rules.elems == 1});
+    @cnfRules.append(@fixedRules);
+
+    return @split[1].race(batch => 12, degree => 6).grep({cyk($_, @cnfRules)}).elems;
+}
+
+sub part2(@input) {
+    my @split = splitList(@input, "");
+    my @rules = @split[0].flatmap(&parseRule);
+
+    # 8: 42 | 42 8
+    # 11: 42 31 | 42 11 31
+
+    # remove rule 8 / 11
+    @rules = @rules.grep(not *.id eq "8"|"11");
+    @rules.push(Rule.new(id => "8", terminal => False, rules => ("42")));
+    @rules.push(Rule.new(id => "8", terminal => False, rules => ("42", "8")));
+
+    @rules.push(Rule.new(id => "11", terminal => False, rules => ("42", "31")));
+    @rules.push(Rule.new(id => "11", terminal => False, rules => ("42", "X")));
+    @rules.push(Rule.new(id => "X", terminal => False, rules => ("11", "31")));
+
+    my @unitRules = @rules.grep({not $_.terminal and $_.rules.elems == 1});
+    my @fixedRules = @unitRules.flatmap(-> $rule {
+        my @matchingRules = @rules.grep(*.id eq $rule.rules[0]);
+        @matchingRules.map({my $newRule = $_.clone; $newRule.id = $rule.id; $newRule})
+    });
+
+    my @cnfRules = @rules.grep({$_.terminal or not $_.rules.elems == 1});
+    @cnfRules.append(@fixedRules);
+
+
+    return @split[1].race(batch => 12, degree => 6).grep({cyk($_, @cnfRules)}).elems;
+}
+
+sub MAIN() {
+    my @input = "input.txt".IO.lines;
+
+    "Part 1".say;
+    part1(@input).say;
+
+    "Part 2".say;
+    part2(@input).say;
+}
